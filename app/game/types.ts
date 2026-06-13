@@ -363,7 +363,6 @@ export const SYNDROMES: Syndrome[] = [
       ],
     },
   },
-
   {
     name: "Methylmalonic Acidemia",
     initialPrompt: {

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {SYNDROMES, GameState, Attempt, InfoCard} from "./types"
 import { getAttemptedIndices, addAttempted, clearAttempted, getAttemptedMap } from "./cookie"
-import { useSearchParams } from 'next/navigation'
 import Image from "next/image"
 import {LowFotter, InfoCardComp} from "./components"
 import Link from "next/link"
@@ -28,15 +27,16 @@ const CLUE_ACCENT = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GeneticlePage() {
-  const searchParams = useSearchParams();
+  
 
   // Start at 0 on the server to avoid hydration mismatch; pick proper index on mount
   const [syndromeIndex, setSyndromeIndex] = useState<number>(0);
 
   useEffect(() => {
     try {
-      // If index provided in query params and valid, use it
-      const q = searchParams ? searchParams.get('index') : null;
+      // If index provided in query params and valid, use it. Use window.location
+      // to avoid client-only next/navigation helpers that can cause build issues.
+      const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get('index') : null;
       if (q) {
         const qi = Number(q);
         if (!Number.isNaN(qi) && qi >= 0 && qi < SYNDROMES.length) {
@@ -60,7 +60,7 @@ export default function GeneticlePage() {
     } catch {
       setSyndromeIndex(0);
     }
-  }, [searchParams]);
+  }, []);
   const [cluesRevealed, setCluesRevealed] = useState(0);
   const [selected, setSelected] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -76,12 +76,18 @@ export default function GeneticlePage() {
   const syndrome = SYNDROMES[syndromeIndex];
   const maxGuesses = MAX_CLUES + 1;
   const guessesLeft = maxGuesses - attempts.length;
-  const guessedNames = attempts.map((a) => a.guess);
-  const filteredOptions = SYNDROME_NAMES.filter(
-    (name) =>
-      !guessedNames.includes(name) &&
-      name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredOptions = useMemo(() => {
+    const guessedNames = attempts.map((a) => a.guess);
+    const opts = SYNDROME_NAMES.filter(
+      (name) => !guessedNames.includes(name) && name.toLowerCase().includes(search.toLowerCase())
+    );
+    // Fisher-Yates shuffle
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    return opts;
+  }, [search, attempts]);
   const wrongAttempts = attempts.filter((a) => !a.correct);
 
   // Close dropdown on outside click
