@@ -32,6 +32,7 @@ export function InfoCardComp(props?: InfoCardWithTitle){
 
 export function LowFotter(){
         return <div> 
-                <p className="mt-6 text-center text-xs text-blue-300"> Done with love By al-Khattab Al-hinaai </p>
+                <p className="mt-6 text-center text-xs text-blue-300"> By Al-Khattab Al-hinaai </p>
+                <p className="mt-6 text-center text-xs text-blue-300"> alhinaaialkhattab@gmail.com </p>
         </div>
 }
