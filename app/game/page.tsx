@@ -81,13 +81,16 @@ export default function GeneticlePage() {
     const opts = SYNDROME_NAMES.filter(
       (name) => !guessedNames.includes(name) && name.toLowerCase().includes(search.toLowerCase())
     );
-    // Fisher-Yates shuffle
+    // Avoid randomizing before the component is mounted to keep server and
+    // client renders deterministic and prevent hydration mismatches.
+    if (!mounted) return opts;
+    // Fisher-Yates shuffle (client-only)
     for (let i = opts.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [opts[i], opts[j]] = [opts[j], opts[i]];
     }
     return opts;
-  }, [search, attempts]);
+  }, [search, attempts, mounted]);
   const wrongAttempts = attempts.filter((a) => !a.correct);
 
   // Close dropdown on outside click
@@ -312,7 +315,7 @@ export default function GeneticlePage() {
         </div>
 
         {/* ── Clue cards ────────────────────────────────────────────────── */}
-        {Array.from({ length: cluesRevealed }).map((_, i) => (
+        {Array.from({ length: gameState === "won" ? syndrome.clues.length : cluesRevealed }).map((_, i) => (
           <div
             key={i}
             className={`mb-2.5 rounded-xl border border-blue-100 bg-white px-5 py-4 text-sm leading-relaxed text-slate-700 shadow-sm border-l-4 ${CLUE_ACCENT[i % CLUE_ACCENT.length]} ${
@@ -331,17 +334,20 @@ export default function GeneticlePage() {
         {/* Remaining clues revealed on loss */}
         {gameState === "lost" &&
           showAllClues &&
-          Array.from({ length: MAX_CLUES - cluesRevealed }).map((_, i) => {
-            const idx = cluesRevealed + i;
-            return (
-              <div
-                key={`rev-${idx}`}
-                className={`mb-2.5 rounded-xl border border-blue-100 bg-slate-50 px-5 py-4 text-sm leading-relaxed text-slate-400 border-l-4 ${CLUE_ACCENT[idx % CLUE_ACCENT.length]} opacity-60`}
-              >
-                {syndrome.clues[idx]}
-              </div>
-            );
-          })}
+          (() => {
+            const remainingCount = Math.max(0, syndrome.clues.length - cluesRevealed);
+            return Array.from({ length: remainingCount }).map((_, i) => {
+              const idx = cluesRevealed + i;
+              return (
+                <div
+                  key={`rev-${idx}`}
+                  className={`mb-2.5 rounded-xl border border-blue-100 bg-slate-50 px-5 py-4 text-sm leading-relaxed text-slate-400 border-l-4 ${CLUE_ACCENT[idx % CLUE_ACCENT.length]} opacity-60`}
+                >
+                  {syndrome.clues[idx]}
+                </div>
+              );
+            });
+          })()}
 
         {/* ── Guess input area ──────────────────────────────────────────── */}
         {gameState === "playing" && (
